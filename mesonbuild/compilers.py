@@ -1,4 +1,4 @@
-# Copyright 2012-2014 The Meson development team
+# Copyright 2012-2017 The Meson development team
 
 # Licensed under the Apache License, Version 2.0 (the "License");
 # you may not use this file except in compliance with the License.
@@ -228,6 +228,18 @@ base_options = {'b_pch': coredata.UserBooleanOption('b_pch', 'Use precompiled he
                                                           'Build static libraries as position independent',
                                                           True),
                 }
+
+gnulike_instruction_set_args = {'mmx': ['-mmmx'],
+                                'sse': ['-msse'],
+                                'sse2': ['-msse2'],
+                                'sse3': ['-msse3'],
+                                'ssse3': ['-mssse3'],
+                                'sse41': ['-msse4.1'],
+                                'sse42': ['-msse4.2'],
+                                'avx': ['-mavx'],
+                                'avx2': ['-mavx2'],
+                                'neon': ['-mfpu=neon'],
+                                }
 
 def sanitizer_compile_args(value):
     if value == 'none':
@@ -710,6 +722,12 @@ class Compiler:
         if isinstance(args, list) and not args:
             return []
         raise EnvironmentException('Language %s does not support linking whole archives.' % self.language)
+
+    # Compiler arguments needed to enable the given instruction set.
+    # May be [] meaning nothing needed or None meaning the given set
+    # is not supported.
+    def get_instruction_set_args(self, instruction_set):
+        return None
 
 class CCompiler(Compiler):
     def __init__(self, exelist, version, is_cross, exe_wrapper=None):
@@ -2503,6 +2521,10 @@ class GnuCompiler:
             return ['-mwindows']
         return []
 
+    def get_instruction_set_args(self, instruction_set):
+        return gnulike_instruction_set_args.get(instruction_set, None)
+
+
 class GnuCCompiler(GnuCompiler, CCompiler):
     def __init__(self, exelist, version, gcc_type, is_cross, exe_wrapper=None, defines=None):
         CCompiler.__init__(self, exelist, version, is_cross, exe_wrapper)
@@ -2701,6 +2723,9 @@ class ClangCCompiler(ClangCompiler, CCompiler):
 
     def get_option_link_args(self, options):
         return []
+
+    def get_instruction_set_args(self, instruction_set):
+        return gnulike_instruction_set_args.get(instruction_set, None)
 
 
 class ClangCPPCompiler(ClangCompiler, CPPCompiler):
