@@ -241,6 +241,31 @@ gnulike_instruction_set_args = {'mmx': ['-mmmx'],
                                 'neon': ['-mfpu=neon'],
                                 }
 
+vs32_instruction_set_args = {'mmx': ['/arch:SSE'], # There does not seem to be a flag just for MMX
+                           'sse': ['/arch:SSE'],
+                           'sse2': ['/arch:SSE2'],
+                           'sse3': ['/arch:AVX'], # VS leaped from SSE2 directly to AVX.
+                           'ssse3': ['/arch:AVX'],
+                           'sse41': ['/arch:AVX'],
+                           'sse42': ['/arch:AVX'],
+                           'avx': ['/arch:AVX'],
+                           'avx2': ['/arch:AVX2'],
+                           'neon': None,
+}
+
+# The 64 bit compiler defaults to /arch:avx.
+vs64_instruction_set_args = {'mmx': ['/arch:AVX'],
+                             'sse': ['/arch:AVX'],
+                             'sse2': ['/arch:AVX'],
+                             'sse3': ['/arch:AVX'],
+                             'ssse3': ['/arch:AVX'],
+                             'sse41': ['/arch:AVX'],
+                             'sse42': ['/arch:AVX'],
+                             'avx': ['/arch:AVX'],
+                             'avx2': ['/arch:AVX2'],
+                             'neon': None,
+}
+
 def sanitizer_compile_args(value):
     if value == 'none':
         return []
@@ -2155,7 +2180,7 @@ class VisualStudioCCompiler(CCompiler):
     std_warn_args = ['/W3']
     std_opt_args = ['/O2']
 
-    def __init__(self, exelist, version, is_cross, exe_wrap):
+    def __init__(self, exelist, version, is_cross, exe_wrap,is_64):
         CCompiler.__init__(self, exelist, version, is_cross, exe_wrap)
         self.id = 'msvc'
         # /showIncludes is needed for build dependency tracking in Ninja
@@ -2165,6 +2190,7 @@ class VisualStudioCCompiler(CCompiler):
                           '2': ['/W3'],
                           '3': ['/W4']}
         self.base_options = ['b_pch'] # FIXME add lto, pgo and the like
+        self.is_64 = True
 
     # Override CCompiler.get_always_args
     def get_always_args(self):
@@ -2351,12 +2377,16 @@ class VisualStudioCCompiler(CCompiler):
             args = [args]
         return ['/WHOLEARCHIVE:' + x for x in args]
 
+    def get_instruction_set_args(self, instruction_set):
+        if self.is_64:
+            return vs64_instruction_set_args.get(instruction_set, None)
+        return vs32_instruction_set_args.get(instruction_set, None)
 
 class VisualStudioCPPCompiler(VisualStudioCCompiler, CPPCompiler):
-    def __init__(self, exelist, version, is_cross, exe_wrap):
+    def __init__(self, exelist, version, is_cross, exe_wrap, is_64):
         self.language = 'cpp'
         CPPCompiler.__init__(self, exelist, version, is_cross, exe_wrap)
-        VisualStudioCCompiler.__init__(self, exelist, version, is_cross, exe_wrap)
+        VisualStudioCCompiler.__init__(self, exelist, version, is_cross, exe_wrap, is_64)
         self.base_options = ['b_pch'] # FIXME add lto, pgo and the like
 
     def get_options(self):
