@@ -2380,7 +2380,6 @@ class VisualStudioCCompiler(CCompiler):
     def get_instruction_set_args(self, instruction_set):
         if self.is_64:
             return vs64_instruction_set_args.get(instruction_set, None)
-        print(self.version)
         if self.version.split('.')[0] == '16' and instruction_set == 'avx':
             # VS documentation says that this exists and should work, but
             # it does not. The headers do not contain AVX intrinsics
